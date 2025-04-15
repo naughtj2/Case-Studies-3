@@ -6,6 +6,7 @@
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
+#define TOL 1e-8
 
 double f(double x1, double x2) {
     return 2 * M_PI * M_PI * sin(M_PI * x1) * sin(M_PI * x2);
@@ -75,3 +76,53 @@ double dot(const double *a, const double *b, int n) {
     return sum;
 }
 
+// Conjugate Gradient Solver
+int conjugate_gradient(int N, int size, double *x, const double *b) {
+    int max_iter = 10000;
+    int k = 0;
+
+    double *r = calloc(size, sizeof(double));
+    double *p = calloc(size, sizeof(double));
+    double *Ap = calloc(size, sizeof(double));
+
+    applyA(N, x, Ap);
+
+    for (int i = 0; i < size; ++i)
+        r[i] = b[i] - Ap[i];
+
+    for (int i = 0; i < size; ++i)
+        p[i] = r[i];
+
+    double rs_old = dot(r, r, size);
+    double rs_new;
+
+    // printf("Initial residual norm: %.12f\n", sqrt(rs_old));
+
+    do {
+        applyA(N, p, Ap);
+        double alpha = rs_old / dot(p, Ap, size);
+
+        for (int i = 0; i < size; ++i)
+            x[i] += alpha * p[i];
+        for (int i = 0; i < size; ++i)
+            r[i] -= alpha * Ap[i];
+
+        rs_new = dot(r, r, size);
+        ++k;
+
+        if (sqrt(rs_new) < TOL)
+            break;
+
+        for (int i = 0; i < size; ++i)
+            p[i] = r[i] + (rs_new / rs_old) * p[i];
+
+        rs_old = rs_new;        
+    } while (k < max_iter);
+
+    free(r);
+    free(p);
+    free(Ap);
+
+    // printf("Final residual norm: %.12f\n", sqrt(rs_new));
+    return k;
+}
