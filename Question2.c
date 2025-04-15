@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define IDX(i, j, N) ((i) * (N) + (j))
 #ifndef M_PI
@@ -125,4 +126,58 @@ int conjugate_gradient(int N, int size, double *x, const double *b) {
 
     // printf("Final residual norm: %.12f\n", sqrt(rs_new));
     return k;
+}
+
+int main() {
+    FILE *results = fopen("cg_results.txt", "w");
+    fprintf(results, "N Iterations Time(s)\n");
+
+    for (int N = 8; N <= 256; N *= 2) {
+        int size = N * N;
+        double h = 1.0 / (N + 1);
+
+        double *b = malloc(size * sizeof(double));
+        double *x = calloc(size, sizeof(double));
+
+        for (int i = 0; i < N; ++i) {
+            double x1 = (i + 1) * h;
+            for (int j = 0; j < N; ++j) {
+                double x2 = (j + 1) * h;
+                b[IDX(i, j, N)] = rhs(x1, x2) * h * h;
+            }
+        }
+
+        for (int i = 0; i < size; ++i) {
+            x[i] = ((double)rand() / RAND_MAX);
+        }
+
+        clock_t start = clock();
+        int iters = conjugate_gradient(N, size, x, b);
+        clock_t end = clock();
+
+        double time_spent = (double) (end - start) / CLOCKS_PER_SEC;
+
+        printf("CG converged in %d iterations for N = %d\n", iters, N);
+        printf("Time taken: %.4f seconds\n\n", time_spent);
+
+        fprintf(results, "%d %d %.6f\n", N, iters, time_spent);
+
+        char filename[64];
+        sprintf(filename, "solution_%d.txt", N);
+        FILE *solfile = fopen(filename, "w");
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; i < N; ++j) {
+                fprintf(solfile, "%f", x[IDX(i, j, N)]);
+                if (j < N - 1) fprintf(solfile, " ");
+            }
+            fprintf(solfile, "\n");
+        }
+        fclose(solfile);
+
+        free(b);
+        free(x);
+    }
+
+    fclose(results);
+    return 0;
 }
